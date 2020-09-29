@@ -8,8 +8,8 @@
 
 #import "ViewController.h"
 
-#define TEST_PACKET_SIZE 1000
-#define REPORT_INTERVAL_MS 3000
+#define TEST_PACKET_SIZE 1500
+#define REPORT_INTERVAL_MS 2000
 
 @interface ViewController ()
 
@@ -47,8 +47,7 @@
     self.throughputLabel.text = @"";
 }
 
--(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
-{
+-(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode {
     uint8_t buf[1024];
     NSData * data;
     NSInteger len;
@@ -58,14 +57,22 @@
             NSLog(@"NSStreamEventOpenCompleted");
             break;
         case NSStreamEventHasSpaceAvailable:
-            [self sendStreamData];
+//            [self sendStreamData];
             break;
         case NSStreamEventHasBytesAvailable:
             len = [(NSInputStream *)aStream read:buf maxLength:1024];
-            NSLog(@"NSStreamEventHasBytesAvailable (this %@), read %u bytes",aStream, (int) len);
-            if(len) {
-                [NSData dataWithBytes:buf length:len];
-                NSLog(@"%@", data);
+            
+//            NSLog(@"NSStreamEventHasBytesAvailable (this %@), read %u bytes",aStream, (int) len);
+            
+            if (len) {
+                data = [NSData dataWithBytes:buf length:len];
+                NSString *s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                self.logTextView.text = s;
+                
+//                NSString *s = [[NSString alloc] initWithBytes:buf
+//                                                 length:len
+//                                                 encoding:NSUTF8StringEncoding];
+//                NSLog(@"%@", s);
             }
             break;
         case NSStreamEventErrorOccurred:
@@ -107,7 +114,7 @@ static NSDate * track_interval_start;
     self.statusLabel.text = [NSString stringWithFormat:@"Sent: %u bytes", track_total_bytes];
 
     // wait until 20 kB are sent - seems to be buffered locally on iOS
-    if (track_total_bytes < 20000) return;
+//    if (track_total_bytes < 20000) return;
 
     NSDate * now = [NSDate date];
     if (track_interval_start == nil){
@@ -126,8 +133,7 @@ static NSDate * track_interval_start;
     track_interval_start = now;
 }
 
--(void)sendStreamData
-{
+-(void)sendStreamData {
     // check
     if (![self->outputStream hasSpaceAvailable]){
         NSLog(@"No space available, skip");
@@ -139,10 +145,12 @@ static NSDate * track_interval_start;
     uint8_t test_data[TEST_PACKET_SIZE];
     memset(test_data, counter++, TEST_PACKET_SIZE);
     if (counter > 'z') counter = 'a';
-    
+
     NSData* data = [NSData dataWithBytes:test_data length:TEST_PACKET_SIZE];
+
     NSInteger res = [self->outputStream write:[data bytes] maxLength:[data length]];
-    if (res == TEST_PACKET_SIZE){
+    
+    if (res == data.length){
         // track
         [self trackData:(int)[data length]];
     } else {
@@ -156,4 +164,24 @@ static NSDate * track_interval_start;
     // Dispose of any resources that can be recreated.
 }
 
+- (IBAction)textChanged:(id)sender {
+    NSData* data = [self.textInput.text dataUsingEncoding:NSUTF8StringEncoding];
+    self.textInputSizeLabel.text = [[NSString alloc] initWithFormat:@"%lu Bytes", data.length];
+}
+
+- (IBAction)sendText:(id)sender {
+    if (self.textInput.text.length < 1) return;
+    
+    NSData* data = [self.textInput.text dataUsingEncoding:NSUTF8StringEncoding];
+    NSInteger res = [self->outputStream write:[data bytes] maxLength:[data length]];
+    
+    if (res == data.length){
+        // track
+        [self trackData:(int)[data length]];
+    } else {
+        NSLog(@"Error: Write %u bytes, res %d", TEST_PACKET_SIZE, (int) res);
+        self.throughputLabel.text = [NSString stringWithFormat:@"Write %u bytes, res %d", TEST_PACKET_SIZE, (int) res];
+    }
+
+}
 @end

@@ -18,5 +18,12 @@
 @property (weak, nonatomic) IBOutlet UILabel *statusLabel;
 @property (weak, nonatomic) IBOutlet UILabel *throughputLabel;
 
+@property (weak, nonatomic) IBOutlet UILabel *textInputSizeLabel;
+@property (weak, nonatomic) IBOutlet UITextField *textInput;
+@property (weak, nonatomic) IBOutlet UITextView *logTextView;
+
+- (IBAction)sendText:(id)sender;
+- (IBAction)textChanged:(id)sender;
+
 @end
 
